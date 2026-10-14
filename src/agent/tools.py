@@ -4,7 +4,9 @@ from .services import Services
 from typing import Optional
 import json
 
-BASE_URL = "http://127.0.0.1:8000/"
+BACKEND_URL = os.environ.get(
+    "BACKEND_URL",)
+
 
 
 def Tools(access_token):
