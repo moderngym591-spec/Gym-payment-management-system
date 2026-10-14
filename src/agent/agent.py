@@ -17,9 +17,7 @@ def get_agent(access_token):
     tools = Tools(access_token=access_token)
    
 
-    for item in tools:
-        print("Name:", repr(item.name))
-        print("Schema:", item.args_schema.model_json_schema())
+    
     model_with_tool = model.bind_tools(tools=tools)
 
     def agent(state: State):
