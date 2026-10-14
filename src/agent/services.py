@@ -1,10 +1,10 @@
-import requests
 
+import requests
 
 
 class Services:
     def __init__(self, base_url, access_token):
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/") + "/"
         self.access_token = access_token
 
     def _headers(self):
@@ -15,10 +15,10 @@ class Services:
 
     def _get(self, endpoint, params=None):
         response = requests.get(
-            f"{self.base_url}{endpoint}",
+            f"{self.base_url}{endpoint.lstrip('/')}",
             headers=self._headers(),
             params=params or {},
-            
+            timeout=(5, 15),
         )
         response.raise_for_status()
         return response.json()
@@ -44,8 +44,32 @@ class Services:
         }
         return self._get("members/overdue/", params)
 
-   
-   
+    def search_members(self, name=None, phone=None, member_id=None):
+        params = {}
+
+        if member_id:
+            params["search"] = str(member_id)
+        elif name:
+            params["search"] = name
+        elif phone:
+            params["search"] = phone
+        else:
+            return {
+                "results": [],
+                "message": (
+                    "Provide a member name, phone number, or member ID."
+                ),
+            }
+
+        result = self._get("members/", params)
+
+        # Support paginated DRF responses and plain lists.
+        if isinstance(result, dict) and isinstance(result.get("results"), list):
+            result["results"] = result["results"][:10]
+        elif isinstance(result, list):
+            result = result[:10]
+
+        return result
 
     def get_member_payment_history(
         self,
@@ -56,14 +80,13 @@ class Services:
         end_date=None,
     ):
         from uuid import UUID
-        
+
         params = {}
 
         if member_id:
             try:
                 UUID(str(member_id))
             except (ValueError, TypeError, AttributeError):
-                # The model may have supplied a name instead of a UUID.
                 if not name and not phone:
                     return {
                         "results": [],
@@ -72,7 +95,6 @@ class Services:
                             "or phone number first."
                         ),
                     }
-
                 member_id = None
 
         if member_id:
@@ -84,7 +106,10 @@ class Services:
         else:
             return {
                 "results": [],
-                "message": "Provide a member name, phone number, or valid member ID.",
+                "message": (
+                    "Provide a member name, phone number, "
+                    "or valid member ID."
+                ),
             }
 
         if start_date:
